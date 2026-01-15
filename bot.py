@@ -1,35 +1,38 @@
-# ================== AUTO INSTALL ==================
-import sys, subprocess, asyncio
-
-def install(pkg):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
-
-try:
-    from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-    from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-except:
-    install("python-telegram-bot==20.7")
-    from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-    from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-
 # ================== CONFIG ==================
 BOT_TOKEN = "8462352456:AAGBwbmz0tCNULt5HLISM61cprOAkDzDvQU"
 
 MY_ID = 8429537293
 FRIEND_ID = 5758526328
 
-# ================== BOT LOGIC ==================
+# ================== IMPORTS ==================
+import asyncio
+import threading
+import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes
+)
+
+# ================== START COMMAND ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != MY_ID:
         return
 
-    keyboard = [[InlineKeyboardButton("📳 اهتزاز", callback_data="vibe")]]
+    keyboard = [
+        [InlineKeyboardButton("🔔 جرس", callback_data="ring")]
+    ]
 
     await update.message.reply_text(
         "اضغط الزر 👇",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+# ================== BUTTON HANDLER ==================
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -37,29 +40,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.from_user.id != MY_ID:
         return
 
-    # 1️⃣ نرسل الجرس
-    msg = await context.bot.send_message(
-        chat_id=FRIEND_ID,
-        text="🔔"
-    )
+    # رسالة غير مرئية
+    text = "‎"
 
-    # 2️⃣ ننتظر نص ثانية
-    await asyncio.sleep(0.5)
+    msg_me = await context.bot.send_message(MY_ID, text)
+    msg_friend = await context.bot.send_message(FRIEND_ID, text)
 
-    # 3️⃣ نحذف الرسالة
-    try:
-        await context.bot.delete_message(
-            chat_id=FRIEND_ID,
-            message_id=msg.message_id
-        )
-    except:
-        pass
+    await asyncio.sleep(2)
 
-# ================== WEB SERVER (RENDER) ==================
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import os
+    await context.bot.delete_message(MY_ID, msg_me.message_id)
+    await context.bot.delete_message(FRIEND_ID, msg_friend.message_id)
 
+# ================== WEB SERVER (UPTIMEROBOT) ==================
 class PingHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
