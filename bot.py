@@ -7,11 +7,21 @@ def install(pkg):
 
 try:
     from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-    from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+    from telegram.ext import (
+        ApplicationBuilder,
+        CommandHandler,
+        CallbackQueryHandler,
+        ContextTypes,
+    )
 except:
     install("python-telegram-bot==20.7")
     from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-    from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+    from telegram.ext import (
+        ApplicationBuilder,
+        CommandHandler,
+        CallbackQueryHandler,
+        ContextTypes,
+    )
 
 # ================== CONFIG ==================
 BOT_TOKEN = "8462352456:AAGBwbmz0tCNULt5HLISM61cprOAkDzDvQU"
@@ -27,6 +37,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("📳 اهتزاز", callback_data="vibe")]
     ]
+
     await update.message.reply_text(
         "اضغط الزر 👇",
         reply_markup=InlineKeyboardMarkup(keyboard)
@@ -39,13 +50,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.from_user.id != MY_ID:
         return
 
-    # رسالة شبه فاضية (بس علشان يهتز)
+    # رسالة شبه فاضية (تسبب اهتزاز فقط)
     await context.bot.send_message(
         chat_id=FRIEND_ID,
-        text="‎"  # حرف غير مرئي
+        text="\u200b"  # zero width space
     )
 
-# ================== WEB SERVER (UPTIMEROBOT) ==================
+# ================== WEB SERVER (RENDER / UPTIMEROBOT) ==================
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
@@ -57,7 +68,7 @@ class PingHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"OK")
 
 def run_server():
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 10000))
     HTTPServer(("0.0.0.0", port), PingHandler).serve_forever()
 
 threading.Thread(target=run_server, daemon=True).start()
