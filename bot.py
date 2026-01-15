@@ -58,8 +58,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # حذف الرسائل
         await context.bot.delete_message(sender_id, msg_sender.message_id)
         await context.bot.delete_message(receiver_id, msg_receiver.message_id)
-        
-        await query.edit_message_text("✅ تم إرسال الإشعار")
     except Exception as e:
         if "bot was blocked by the user" in str(e) or "chat not found" in str(e):
             await query.edit_message_text("⚠️ الشخص الآخر لم يبدأ محادثة مع البوت بعد!\nاطلب منه إرسال /start للبوت")
