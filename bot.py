@@ -24,7 +24,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     keyboard = [
-        [InlineKeyboardButton("🔔 جرس", callback_data="ring")]
+        [InlineKeyboardButton("🔔 جرس", callback_data="ring")],
+        [InlineKeyboardButton("💣 سبام (10x)", callback_data="spam")]
     ]
     await update.message.reply_text(
         "اضغط الزر لإرسال إشعار 👇",
@@ -48,16 +49,25 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = "🔔"
     
     try:
-        # إرسال للطرفين
-        msg_sender = await context.bot.send_message(sender_id, text)
-        msg_receiver = await context.bot.send_message(receiver_id, text)
+        # تحديد عدد المرات
+        if query.data == "spam":
+            repeat_count = 10
+        else:
+            repeat_count = 1
         
-        # الانتظار ثانيتين
-        await asyncio.sleep(2)
+        # إرسال الإشعارات
+        for i in range(repeat_count):
+            msg_sender = await context.bot.send_message(sender_id, text)
+            msg_receiver = await context.bot.send_message(receiver_id, text)
+            
+            await asyncio.sleep(0.5)
+            
+            await context.bot.delete_message(sender_id, msg_sender.message_id)
+            await context.bot.delete_message(receiver_id, msg_receiver.message_id)
+            
+            if i < repeat_count - 1:
+                await asyncio.sleep(0.3)
         
-        # حذف الرسائل
-        await context.bot.delete_message(sender_id, msg_sender.message_id)
-        await context.bot.delete_message(receiver_id, msg_receiver.message_id)
     except Exception as e:
         if "bot was blocked by the user" in str(e) or "chat not found" in str(e):
             await query.edit_message_text("⚠️ الشخص الآخر لم يبدأ محادثة مع البوت بعد!\nاطلب منه إرسال /start للبوت")
