@@ -16,37 +16,55 @@ from telegram.ext import (
 )
 # ================== START COMMAND ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != MY_ID:
+    user_id = update.effective_user.id
+    
+    # السماح للطرفين فقط
+    if user_id not in [MY_ID, FRIEND_ID]:
+        await update.message.reply_text("⛔ غير مصرح لك")
         return
+    
     keyboard = [
         [InlineKeyboardButton("🔔 جرس", callback_data="ring")]
     ]
     await update.message.reply_text(
-        "اضغط الزر 👇",
+        "اضغط الزر لإرسال إشعار 👇",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 # ================== BUTTON HANDLER ==================
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    if query.from_user.id != MY_ID:
+    
+    sender_id = query.from_user.id
+    
+    # التحقق من الصلاحية
+    if sender_id not in [MY_ID, FRIEND_ID]:
         return
+    
+    # تحديد المستقبل (الشخص الآخر)
+    receiver_id = FRIEND_ID if sender_id == MY_ID else MY_ID
     
     # رسالة مرئية تظهر إشعار
     text = "🔔"
     
-    # إرسال للطرفين
-    msg_me = await context.bot.send_message(MY_ID, text)
-    msg_friend = await context.bot.send_message(FRIEND_ID, text)
-    
-    # الانتظار ثانيتين
-    await asyncio.sleep(2)
-    
-    # حذف الرسائل
-    await context.bot.delete_message(MY_ID, msg_me.message_id)
-    await context.bot.delete_message(FRIEND_ID, msg_friend.message_id)
-    
-    await query.edit_message_text("✅ تم إرسال الإشعار")
+    try:
+        # إرسال للطرفين
+        msg_sender = await context.bot.send_message(sender_id, text)
+        msg_receiver = await context.bot.send_message(receiver_id, text)
+        
+        # الانتظار ثانيتين
+        await asyncio.sleep(2)
+        
+        # حذف الرسائل
+        await context.bot.delete_message(sender_id, msg_sender.message_id)
+        await context.bot.delete_message(receiver_id, msg_receiver.message_id)
+        
+        await query.edit_message_text("✅ تم إرسال الإشعار")
+    except Exception as e:
+        if "bot was blocked by the user" in str(e) or "chat not found" in str(e):
+            await query.edit_message_text("⚠️ الشخص الآخر لم يبدأ محادثة مع البوت بعد!\nاطلب منه إرسال /start للبوت")
+        else:
+            await query.edit_message_text(f"❌ خطأ: {str(e)}")
 # ================== WEB SERVER (UPTIMEROBOT) ==================
 class PingHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -54,7 +72,7 @@ class PingHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"OK")
     def log_message(self, format, *args):
-        pass  # تعطيل سجل الطلبات
+        pass
 def run_server():
     port = int(os.environ.get("PORT", 10000))
     HTTPServer(("0.0.0.0", port), PingHandler).serve_forever()
