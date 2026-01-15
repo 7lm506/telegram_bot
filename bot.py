@@ -50,16 +50,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.from_user.id != MY_ID:
         return
 
-    # رسالة شبه فاضية (تسبب اهتزاز فقط)
+    # رسالة شبه فاضية = اهتزاز
     await context.bot.send_message(
         chat_id=FRIEND_ID,
-        text="\u200b"  # zero width space
+        text="\u200b"
     )
 
-# ================== WEB SERVER (RENDER / UPTIMEROBOT) ==================
+# ================== WEB SERVER (PORT ثابت داخل الكود) ==================
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import os
 
 class PingHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -68,8 +67,7 @@ class PingHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"OK")
 
 def run_server():
-    port = int(os.environ.get("PORT", 10000))
-    HTTPServer(("0.0.0.0", port), PingHandler).serve_forever()
+    HTTPServer(("0.0.0.0", 10000), PingHandler).serve_forever()
 
 threading.Thread(target=run_server, daemon=True).start()
 
