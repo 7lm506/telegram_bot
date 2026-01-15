@@ -1,83 +1,74 @@
+# ================== AUTO INSTALL ==================
 import sys
-import os
+import subprocess
 
-sys.path.append(r'C:\Users\salta\AppData\Roaming\Python\Python311\site-packages')
+def install(pkg):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
 
 try:
-    import telegram
-except ImportError:
-    import subprocess
-    print("Installing python-telegram-bot...")
-    python_exe = sys.executable.replace('pythonw.exe', 'python.exe')
-    subprocess.run([python_exe, "-m", "pip", "install", "python-telegram-bot", "--user"])
-    print("Installed! Restart script now.")
-    input("Press Enter...")
-    sys.exit(0)
+    from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+    from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+except:
+    install("python-telegram-bot==20.7")
+    from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+    from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-import logging
-import asyncio
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
-
+# ================== CONFIG ==================
 BOT_TOKEN = "8462352456:AAGBwbmz0tCNULt5HLISM61cprOAkDzDvQU"
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+MY_ID = 8429537293
+FRIEND_ID = 5758526328
 
-users = {}
-
+# ================== BOT LOGIC ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    
-    if user_id not in users:
-        users[user_id] = []
-    
-    keyboard = [[InlineKeyboardButton("🔔", callback_data="spam")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    msg = await update.message.reply_text("تم التفعيل ✅", reply_markup=reply_markup)
-    users[user_id].append(msg.message_id)
-    users[user_id].append(update.message.message_id)
+    if update.effective_user.id != MY_ID:
+        return
 
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("📳 اهتزاز", callback_data="vibe")]
+    ]
+    await update.message.reply_text(
+        "اضغط الزر 👇",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
-    for user_id in users:
-        try:
-            for msg_id in users[user_id]:
-                try:
-                    await context.bot.delete_message(chat_id=user_id, message_id=msg_id)
-                except:
-                    pass
-            
-            msg = await context.bot.send_message(chat_id=user_id, text="🔔")
-            await asyncio.sleep(0.5)
-            await context.bot.delete_message(chat_id=user_id, message_id=msg.message_id)
-            
-            users[user_id] = []
-            
-        except Exception as e:
-            print(f"Failed: {e}")
 
-def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_callback))
-    app.run_polling()
+    if query.from_user.id != MY_ID:
+        return
 
-if __name__ == '__main__':
-    main()
+    # رسالة شبه فاضية (بس علشان يهتز)
+    await context.bot.send_message(
+        chat_id=FRIEND_ID,
+        text="‎"  # حرف غير مرئي
+    )
 
+# ================== WEB SERVER (UPTIMEROBOT) ==================
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import os
 
-class Handler(BaseHTTPRequestHandler):
+class PingHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is running")
+        self.wfile.write(b"OK")
 
-def keep_alive():
-    server = HTTPServer(("0.0.0.0", 10000), Handler)
-    server.serve_forever()
+def run_server():
+    port = int(os.environ.get("PORT", 8080))
+    HTTPServer(("0.0.0.0", port), PingHandler).serve_forever()
 
-threading.Thread(target=keep_alive, daemon=True).start()
+threading.Thread(target=run_server, daemon=True).start()
+
+# ================== MAIN ==================
+def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    print("Bot is running...")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
