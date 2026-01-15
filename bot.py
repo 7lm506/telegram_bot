@@ -1,6 +1,5 @@
 # ================== AUTO INSTALL ==================
-import sys
-import subprocess
+import sys, subprocess, asyncio
 
 def install(pkg):
     subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
@@ -16,20 +15,18 @@ except:
 # ================== CONFIG ==================
 BOT_TOKEN = "8462352456:AAGBwbmz0tCNULt5HLISM61cprOAkDzDvQU"
 
-MY_ID = 8429537293        # ايديك
-FRIEND_ID = 5758526328    # ايدي خويك
+MY_ID = 8429537293
+FRIEND_ID = 5758526328
 
 # ================== BOT LOGIC ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != MY_ID:
         return
 
-    keyboard = [
-        [InlineKeyboardButton("📳 اهتزاز", callback_data="vibe")]
-    ]
+    keyboard = [[InlineKeyboardButton("📳 اهتزاز", callback_data="vibe")]]
 
     await update.message.reply_text(
-        "👇 اضغط الزر",
+        "اضغط الزر 👇",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -40,14 +37,25 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.from_user.id != MY_ID:
         return
 
-    # اهتزاز فعلي (رسالة غير مرئية)
-    await context.bot.send_message(
+    # 1️⃣ نرسل الجرس
+    msg = await context.bot.send_message(
         chat_id=FRIEND_ID,
-        text="\u200b",              # Zero Width Space
-        disable_notification=False # يضمن الاهتزاز
+        text="🔔"
     )
 
-# ================== WEB SERVER (UPTIMEROBOT) ==================
+    # 2️⃣ ننتظر نص ثانية
+    await asyncio.sleep(0.5)
+
+    # 3️⃣ نحذف الرسالة
+    try:
+        await context.bot.delete_message(
+            chat_id=FRIEND_ID,
+            message_id=msg.message_id
+        )
+    except:
+        pass
+
+# ================== WEB SERVER (RENDER) ==================
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
@@ -69,7 +77,7 @@ def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
-    print("Bot is running 24/7...")
+    print("Bot is running...")
     app.run_polling()
 
 if __name__ == "__main__":
