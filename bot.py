@@ -1,70 +1,70 @@
-# ================== AUTO INSTALL ==================
-import sys
-import subprocess
-
-def ensure(package):
-    try:
-        __import__(package)
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-packages = [
-    "python-telegram-bot==22.5",
-    "httpx",
-    "idna",
-    "anyio",
-    "certifi",
-    "httpcore"
-]
-
-for p in packages:
-    ensure(p.split("==")[0])
-
-# ================== BOT CODE ==================
-import logging
+# ================== CONFIG ==================
+BOT_TOKEN = "8462352456:AAGBwbmz0tCNULt5HLISM61cprOAkDzDvQU"
+MY_ID = 8429537293
+FRIEND_ID = 5758526328
+# ================== IMPORTS ==================
+import asyncio
+import threading
+import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
-
-BOT_TOKEN = "PUT_YOUR_BOT_TOKEN_HERE"
-
-ADMINS = {
-    8429537293,  # ID حقك
-    5758526328   # ID حق خويك
-}
-
-logging.basicConfig(level=logging.INFO)
-
-users = set()
-
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes
+)
+# ================== START COMMAND ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    users.add(update.effective_user.id)
-
-    keyboard = [[InlineKeyboardButton("🔔", callback_data="notify")]]
+    if update.effective_user.id != MY_ID:
+        return
+    keyboard = [
+        [InlineKeyboardButton("🔔 جرس", callback_data="ring")]
+    ]
     await update.message.reply_text(
-        "\u200B",
+        "اضغط الزر 👇",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
-
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ================== BUTTON HANDLER ==================
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-
-    if query.from_user.id not in ADMINS:
-        await query.answer("❌ غير مصرح", show_alert=True)
-        return
-
     await query.answer()
-
-    for uid in users:
-        try:
-            await context.bot.send_message(chat_id=uid, text="\u200B")
-        except:
-            pass
-
+    if query.from_user.id != MY_ID:
+        return
+    
+    # رسالة مرئية تظهر إشعار
+    text = "🔔"
+    
+    # إرسال للطرفين
+    msg_me = await context.bot.send_message(MY_ID, text)
+    msg_friend = await context.bot.send_message(FRIEND_ID, text)
+    
+    # الانتظار ثانيتين
+    await asyncio.sleep(2)
+    
+    # حذف الرسائل
+    await context.bot.delete_message(MY_ID, msg_me.message_id)
+    await context.bot.delete_message(FRIEND_ID, msg_friend.message_id)
+    
+    await query.edit_message_text("✅ تم إرسال الإشعار")
+# ================== WEB SERVER (UPTIMEROBOT) ==================
+class PingHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+    def log_message(self, format, *args):
+        pass  # تعطيل سجل الطلبات
+def run_server():
+    port = int(os.environ.get("PORT", 10000))
+    HTTPServer(("0.0.0.0", port), PingHandler).serve_forever()
+threading.Thread(target=run_server, daemon=True).start()
+# ================== MAIN ==================
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_callback))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    print("Bot is running...")
     app.run_polling()
-
 if __name__ == "__main__":
     main()
